@@ -103,8 +103,10 @@ def build(out, smbios):
         os.makedirs(f"{out}/OC/{d}", exist_ok=True)
     os.makedirs(f"{out}/BOOT", exist_ok=True)
 
-    shutil.copy2(f"{OCR}/BOOT/BOOTx64.efi", f"{out}/BOOT/BOOTx64.efi")
-    shutil.copy2(f"{OCR}/OC/OpenCore.efi",  f"{out}/OC/OpenCore.efi")
+    shutil.copy2(f"{OCR}/OC/OpenCore.efi", f"{out}/OC/OpenCore.efi")
+    # Use full OpenCore.efi as the fallback boot path, NOT the Bootstrap.efi shim:
+    # BIOS EGCN41WW returns EFI_ALREADY_STARTED when the shim chainloads OpenCore.
+    shutil.copy2(f"{OCR}/OC/OpenCore.efi", f"{out}/BOOT/BOOTx64.efi")
 
     for d in ("OpenRuntime.efi", "OpenCanopy.efi", "ResetNvramEntry.efi", "AudioDxe.efi"):
         shutil.copy2(f"{OCR}/OC/Drivers/{d}", f"{out}/OC/Drivers/{d}")
