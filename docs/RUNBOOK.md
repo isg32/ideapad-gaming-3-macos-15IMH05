@@ -93,8 +93,11 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
    Wi-Fi is not available in the installer). USB tethering from a phone also works.
 2. Plug the USB into a **left-side USB-A port**. Power on, tap **F12** → pick the
    **UEFI USB** entry (not the plain one).
-3. OpenCore picker appears → choose **"macOS Base System"** (EFI Boot / reset NVRAM entry
-   also shown — ignore).
+3. OpenCore picker appears with ~4 entries: **`No name`** (the USB's own EFI — ignore),
+   **`install`**, **`install (dmg)`**, **`Reset NVRAM`**. On BIOS `EGCN41WW` the plain
+   `install` entry fails (`StartImage - Already started`); **pick `install (dmg)`** —
+   that's OpenCore booting `BaseSystem.dmg` directly, and it's the one that works.
+   (If entries fail to start, pick **`Reset NVRAM`** once, reboot, and retry.)
 4. If it reaches the macOS Utilities screen: open **Disk Utility**.
    - View → **Show All Devices**
    - Select the **whole ~477 GB SATA SSD** (top-level "Secure Net" device, *not* a
@@ -104,9 +107,13 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
 5. **Reinstall macOS Sequoia** → agree → target **Macintosh HD** → Install.
 6. The laptop reboots itself several times. **Each reboot: F12 → UEFI USB**, and in the
    OpenCore picker choose:
-   - first the entry named **"macOS Installer"** (a few times, ~20–40 min while it
-     downloads + installs),
-   - then finally **"Macintosh HD"**.
+   - first **`macOS Installer`** (a few times, ~20–40 min while it installs),
+   - then finally **`Macintosh HD`**.
+
+> **Network during install:** the `macrecovery` image is an *online* installer — it
+> downloads ~15 GB during step 5, and this laptop has no Wi-Fi in the installer. If your
+> Ethernet is flaky, build an **offline** USB instead: `scripts/download-macos.sh
+> --full` fetches the complete `InstallAssistant` so the install needs no network.
 7. At the Setup Assistant, skip Wi-Fi (use the Ethernet cable), create your account.
 
 ---

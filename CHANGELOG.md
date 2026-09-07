@@ -18,6 +18,12 @@ OpenCore's own log pinned each cause; all three fixes are now in `EFI/`:
 
 Also: `Misc/Debug/ApplePanic = true` (writes `panic-*.txt` to the ESP).
 
+**Result:** the macOS installer boots on BIOS `EGCN41WW`. The OpenCore picker shows
+`No name` / `install` / `install (dmg)` / `Reset NVRAM`; the plain `install` entry fails
+with `StartImage - Already started`, **`install (dmg)` works** (OpenCore booting
+`BaseSystem.dmg` directly). Bring-up picker settings for now: `Timeout=0`,
+`HideAuxiliary=false`.
+
 ## 2026-09-07 — initial release
 
 - OpenCore **1.0.7**, `ocvalidate` clean.

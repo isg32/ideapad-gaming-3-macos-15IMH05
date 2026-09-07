@@ -6,11 +6,12 @@ Sequoia 15**.
 
 Built and installed **entirely from Linux** — no existing Mac needed.
 
-> **Status: bring-up.** The EFI is `ocvalidate`-clean and the config is derived from
-> proven references, but a full install on real hardware isn't confirmed yet. Boot
-> fixes for BIOS `EGCN41WW` (Insyde) landed after the `v1.0.0` release —
-> **use `EFI/` from `main`, not the v1.0.0 asset.** See [`CHANGELOG.md`](CHANGELOG.md)
-> and the "Firmware quirks" section in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+> **Status: bring-up.** The macOS installer now **boots** on real hardware (BIOS
+> `EGCN41WW`, Insyde) after several firmware quirks — pick the **`install (dmg)`** entry
+> in the OpenCore picker. Full install + first boot of the installed system still being
+> validated. Boot fixes landed after `v1.0.0` — **use `EFI/` from `main`, not the
+> v1.0.0 asset.** See [`CHANGELOG.md`](CHANGELOG.md) and the "Firmware quirks" section
+> in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 | | |
 |---|---|
