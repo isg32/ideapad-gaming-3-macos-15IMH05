@@ -1,10 +1,16 @@
 # Lenovo IdeaPad Gaming 3 15IMH05 — Hackintosh (macOS Sequoia, OpenCore)
 
-A tested OpenCore EFI + build/install scripts for turning the **Lenovo IdeaPad Gaming 3
+An OpenCore EFI + build/install scripts for turning the **Lenovo IdeaPad Gaming 3
 15IMH05** (10th‑gen Comet Lake‑H, Intel UHD 630) into a Hackintosh running **macOS
 Sequoia 15**.
 
 Built and installed **entirely from Linux** — no existing Mac needed.
+
+> **Status: bring-up.** The EFI is `ocvalidate`-clean and the config is derived from
+> proven references, but a full install on real hardware isn't confirmed yet. Boot
+> fixes for BIOS `EGCN41WW` (Insyde) landed after the `v1.0.0` release —
+> **use `EFI/` from `main`, not the v1.0.0 asset.** See [`CHANGELOG.md`](CHANGELOG.md)
+> and the "Firmware quirks" section in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 | | |
 |---|---|

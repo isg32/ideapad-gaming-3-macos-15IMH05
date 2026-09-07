@@ -40,6 +40,9 @@ Assumes you've run `scripts/fetch-components.sh`, `scripts/build-efi.py` and
   post-install). `USBMap.kext` (chassis map from the reference EFI) is staged but
   **disabled**.
 - **SecureBootModel**: `Disabled`, **SIP**: enabled, **ScanPolicy**: 0 (shows Fedora too)
+- **Firmware quirks for BIOS EGCN41WW**: `FixupAppleEfiImages`, `RebuildAppleMemoryMap`,
+  `AppleCpuPmCfgLock` all on; `BOOTx64.efi` is the full OpenCore binary (no Bootstrap
+  shim). See "Firmware quirks" below for why.
 
 ---
 
@@ -184,14 +187,24 @@ pick `MacBookPro16,1`, paste the new Serial / MLB / SmUUID / ROM into
 
 ---
 
+## Firmware quirks — BIOS EGCN41WW (Insyde)
+
+These were needed to boot the installer at all on a real 15IMH05 and are **already in
+the shipped `EFI/`**. If you forked an older EFI (e.g. the luchina Sonoma one), add them:
+
+| Symptom in `opencore-*.txt` | Fix (already applied here) |
+|---|---|
+| `OCB: StartImage failed - Invalid Parameter` | `Booter → Quirks → FixupAppleEfiImages = true` |
+| `OCM: Failed to start image - Already started` (a few ms in) | make `EFI/BOOT/BOOTx64.efi` a copy of `EFI/OC/OpenCore.efi` — do **not** use the Bootstrap shim |
+| black screen / early reset, log stops before the picker | `Booter → Quirks → RebuildAppleMemoryMap = true`; also `Kernel → Quirks → AppleCpuPmCfgLock = true` (both PM MSR locks, since this BIOS has no CFG-Lock toggle) |
+
 ## Troubleshooting — common first-boot stalls
 
 | Symptom (last visible line / behaviour) | Fix |
 |---|---|
-| Stuck at `[EB|#LOG:EXITBS:START]` | firmware map issue — in `config.plist` toggle `Booter → Quirks → RebuildAppleMemoryMap = true`, and if still stuck also `EnableWriteUnprotector = false` + `ProtectUefiServices = true` (already set) |
-| Reboots instantly at the Apple logo | usually SMBIOS/CPU PM — confirm `AppleXcpmCfgLock = true` (it is). If it persists, add `Kernel → Quirks → AppleCpuPmCfgLock = true` |
-| Stuck ~30 s then panic mentioning `AppleIntelCPUPowerManagement` | `AppleXcpmCfgLock`/`AppleCpuPmCfgLock` not taking — use `ControlMsrE2.efi` (in `EFI/OC/Tools`, add to `Misc → Tools`) to check if CFG-Lock can be cleared |
-| Hang right after `+++++++...` with no GPU accel / black screen after picker | iGPU: try boot-arg `-igfxvesa` to get to desktop, then verify `AAPL,ig-platform-id`; alternate id `00001B3E` / device-id `9B3E0000` |
+| Stuck at `[EB|#LOG:EXITBS:START]` | `Booter → Quirks → RebuildAppleMemoryMap = true` (already set); if still stuck try `DevirtualiseMmio = true` |
+| Reboots instantly at the Apple logo | SMBIOS/CPU PM — `AppleXcpmCfgLock` + `AppleCpuPmCfgLock` both `true` (already set). Use `ControlMsrE2.efi` (in `EFI/OC/Tools`) to check if CFG-Lock is actually locked |
+| Black screen after the OpenCore picker (installer selected) | iGPU framebuffer. Change `AAPL,ig-platform-id` on `PciRoot(0x0)/Pci(0x2,0x0)`: try **`0900A53E`** (0x3EA50009 — Dortania's rec for UHD 630 laptops) then `00001B3E`. Or boot-arg `-igfxvesa` to reach the desktop without accel and diagnose from there |
 | Black screen but disk active (installer) | add `igfxonln=1` (present) / try removing `-igfxblr`; plug in external nothing (HDMI is dead — it's on the NVIDIA) |
 | `Waiting for root device` / no install disk | USB: move to the other side's ports; ensure `USBToolBox.kext` + `UTBDefault.kext` both enabled |
 | Trackpad dead, keyboard fine | `VoodooI2C` GPIO pin — confirm `SSDT-GPI0.aml` + `SSDT-TPD0.aml` loaded; check `\_SB.PCI0.I2C1.TPD0` in a full DSDT dump matches |

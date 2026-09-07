@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — boot fixes for BIOS EGCN41WW (Insyde/Lenovo)
+
+First install attempts on a real 15IMH05 (BIOS `EGCN41WW`, 2023-06-09) black-screened.
+OpenCore's own log pinned each cause; all three fixes are now in `EFI/`:
+
+1. **`Booter/Quirks/FixupAppleEfiImages = true`** — log showed
+   `OCB: StartImage failed - Invalid Parameter`; this firmware rejects Apple's `boot.efi`
+   PE image. Required for macOS 14+/Sequoia here.
+2. **`BOOTx64.efi` is now the full `OpenCore.efi`, not the Bootstrap shim** — log showed
+   `OCM: Failed to start image - Already started` at 19 ms; the shim can't chainload
+   OpenCore on this firmware, so OpenCore never ran.
+3. **`Booter/Quirks/RebuildAppleMemoryMap = true`** and
+   **`Kernel/Quirks/AppleCpuPmCfgLock = true`** — cross-referenced from
+   [gajjartejas/Lenovo-Ideapad-3-15IML05-Hackintosh](https://github.com/gajjartejas/Lenovo-Ideapad-3-15IML05-Hackintosh),
+   a working macOS Sequoia 15.5 EFI on a Lenovo IdeaPad Comet Lake (Insyde firmware).
+
+Also: `Misc/Debug/ApplePanic = true` (writes `panic-*.txt` to the ESP).
+
 ## 2026-09-07 — initial release
 
 - OpenCore **1.0.7**, `ocvalidate` clean.
