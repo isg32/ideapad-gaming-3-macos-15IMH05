@@ -6,6 +6,10 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write        # needed for softprops/action-gh-release to create/update the release
 
 jobs:
   build:
@@ -22,17 +26,25 @@ jobs:
           "$GITHUB_WORKSPACE/build/downloads/oc-rel/Utilities/ocvalidate/ocvalidate.linux" EFI/OC/config.plist
 
       - name: Package
+        id: pkg
         run: |
           cd "$GITHUB_WORKSPACE"
-          zip -r "EFI-IdeaPad-Gaming-3-15IMH05-${GITHUB_REF_NAME}.zip" EFI docs/RUNBOOK.md docs/COMPONENTS.md
+          name="EFI-IdeaPad-Gaming-3-15IMH05-${GITHUB_REF_NAME//\//-}.zip"
+          zip -r "$name" EFI docs/RUNBOOK.md docs/COMPONENTS.md docs/HARDWARE.md
+          echo "zip=$name" >> "$GITHUB_OUTPUT"
+          ls -lh "$name"
 
       - uses: actions/upload-artifact@v4
         with:
           name: EFI-${{ github.ref_name }}
-          path: EFI-IdeaPad-Gaming-3-15IMH05-*.zip
+          path: ${{ steps.pkg.outputs.zip }}
+          if-no-files-found: error
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: EFI-IdeaPad-Gaming-3-15IMH05-*.zip
+          tag_name: ${{ github.ref_name }}
+          files: ${{ steps.pkg.outputs.zip }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
