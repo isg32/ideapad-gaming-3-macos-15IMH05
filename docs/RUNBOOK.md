@@ -1,7 +1,8 @@
 # Hackintosh install runbook — Lenovo IdeaPad Gaming 3 15IMH05 → macOS Sequoia 15
 
-Everything that can be prepared on Fedora is done. This runbook covers the parts that
-need you physically at the laptop.
+Full walkthrough: prep on Linux, then the parts that need you physically at the laptop.
+Assumes you've run `scripts/fetch-components.sh`, `scripts/build-efi.py` and
+`scripts/gen-smbios.sh` (see the main README).
 
 ---
 
@@ -17,9 +18,10 @@ need you physically at the laptop.
 
 ### EFI contents
 
-- **SMBIOS**: `MacBookPro16,1` — serial `C02FJ0P8MD6N`, MLB `C02114701QXN9PRJA`
-  (freshly generated; fine for install. **Regenerate on macOS with GenSMBIOS if you want
-  iMessage/FaceTime** — see Post-install.)
+- **SMBIOS**: `MacBookPro16,1`. The committed `EFI/` has placeholder serials;
+  `scripts/gen-smbios.sh` writes real ones into `EFI-local/`. They're randomly generated
+  — fine for install; **regenerate on macOS with GenSMBIOS if you want iMessage/FaceTime**
+  (see Post-install).
 - **boot-args**: `-v keepsyms=1 debug=0x100 -igfxblr igfxonln=1`
   (verbose + logging for first boots; trimmed later)
 - **audio**: ALC257 `layout-id 11` via DeviceProperties (proven value from the reference EFI)
