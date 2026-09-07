@@ -8,8 +8,9 @@
 #
 # Layout:
 #   p1  FAT32  INSTALL  ~2.5 GB  -> /EFI (OpenCore) + /com.apple.recovery.boot (boots the installer)
-#   p2  exFAT  MACOS     rest    -> InstallAssistant.pkg   (ONLY if build/fullinstaller/ has it;
-#                                                           makes the install work with no network)
+#   p2  HFS+   MACOS     rest    -> InstallAssistant.pkg   (ONLY if build/fullinstaller/ has it;
+#                                     makes the install work with no network. HFS+ not exFAT -
+#                                     the Sequoia recovery has no exFAT support.)
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,7 +26,7 @@ die(){ echo "ERROR: $*" >&2; exit 1; }
 [[ -b "$DEV" ]] || die "$DEV is not a block device"
 [[ -d "$EFI_SRC/OC" ]] || die "no EFI found (run: python3 scripts/build-efi.py)"
 [[ -f "$REC_SRC/BaseSystem.dmg" ]] || die "no recovery image (run: bash scripts/download-macos.sh)"
-command -v mkfs.exfat >/dev/null || die "need exfatprogs (dnf install exfatprogs)"
+command -v mkfs.hfsplus >/dev/null || die "need hfsplus-tools (dnf install hfsplus-tools)"
 
 OFFLINE=0
 [[ -f "$PKG" && $(stat -c%s "$PKG") -gt 10000000000 ]] && OFFLINE=1
@@ -50,7 +51,7 @@ read -rp "Type ERASE to wipe $DEV and write the installer: " ans
 echo "==> unmounting"
 for p in $(lsblk -nr -o PATH "$DEV" | tail -n +2); do umount "$p" 2>/dev/null || true; done
 
-echo "==> partitioning ($([ $OFFLINE = 1 ] && echo 'FAT32 + exFAT' || echo 'FAT32'))"
+echo "==> partitioning ($([ $OFFLINE = 1 ] && echo 'FAT32 + HFS+' || echo 'FAT32'))"
 wipefs -a "$DEV"
 sfdisk --delete "$DEV" 2>/dev/null || true
 if [[ $OFFLINE == 1 ]]; then
@@ -58,7 +59,7 @@ sfdisk "$DEV" <<'SFD'
 label: gpt
 unit: sectors
 start=2048, size=5120000, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="EFI"
-type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="MACOS"
+type=48465300-0000-11AA-AA11-00306543ECAC, name="MACOS"
 SFD
 else
 sfdisk "$DEV" <<'SFD'
@@ -81,9 +82,9 @@ sync; umount "$M1"; rmdir "$M1"
 
 if [[ $OFFLINE == 1 ]]; then
   P2=$(p 2)
-  echo "==> exFAT $P2 (MACOS)"
-  mkfs.exfat -n MACOS "$P2"
-  M2="$(mktemp -d)"; mount "$P2" "$M2"
+  echo "==> HFS+ $P2 (MACOS)"
+  mkfs.hfsplus -v MACOS "$P2"
+  M2="$(mktemp -d)"; mount -t hfsplus -o rw,force "$P2" "$M2"
   echo "    copying InstallAssistant.pkg ($(du -h "$PKG" | cut -f1))..."
   cp "$PKG" "$M2/InstallAssistant.pkg"
   sync; umount "$M2"; rmdir "$M2"
