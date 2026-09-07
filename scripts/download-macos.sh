@@ -1,42 +1,65 @@
 #!/usr/bin/env bash
-# Download a macOS Sequoia recovery installer (BaseSystem) using OpenCore's macrecovery.
-# Output: build/recovery/com.apple.recovery.boot/   (copied onto the USB by make-usb.sh)
+# Fetch a macOS Sequoia installer for the USB.
 #
-#   bash scripts/download-macos.sh            # Sequoia 15.7.4 (default board)
-#   bash scripts/download-macos.sh <board-id> # override; see boards.json in macrecovery/
+#   bash scripts/download-macos.sh            # ONLINE installer  -> build/recovery/
+#                                             #   (small BaseSystem, downloads ~15 GB during install)
+#   bash scripts/download-macos.sh --full     # OFFLINE installer -> build/fullinstaller/
+#                                             #   (BaseSystem to boot + full InstallAssistant.pkg,
+#                                             #    no network needed during install)
+#   bash scripts/download-macos.sh <board-id> # override recovery board id
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 MR="$REPO/build/downloads/oc-rel/Utilities/macrecovery/macrecovery.py"
-OUT="$REPO/build/recovery/com.apple.recovery.boot"
-BOARD="${1:-Mac-7BA5B2D9E42DDD94}"      # MacBookPro15,1 -> recovery caps at macOS 15.7.4 (Sequoia)
+GIB="$REPO/build/downloads/gibMacOS/gibMacOS.py"
 
-[ -f "$MR" ] || { echo "run scripts/fetch-components.sh first"; exit 1; }
-mkdir -p "$OUT"
-
-# macrecovery.py has two problems in a headless/unstable-network setting:
-#  1) os.get_terminal_size() throws when stdout is not a TTY
-#  2) no socket timeout -> a stalled Apple CDN connection hangs forever
-# This wrapper fixes both and retries.
-for attempt in 1 2 3 4 5; do
-  echo "== attempt $attempt =="
-  if python3 - "$MR" "$BOARD" "$OUT" <<'PY'
+# ---------- recovery BaseSystem (needed for both modes: it's what boots) ----------
+get_recovery() {
+  local board="${1:-Mac-7BA5B2D9E42DDD94}" out="$REPO/build/recovery/com.apple.recovery.boot"
+  [ -s "$out/BaseSystem.dmg" ] && { echo "recovery: already have $out/BaseSystem.dmg"; return; }
+  [ -f "$MR" ] || { echo "run scripts/fetch-components.sh first"; exit 1; }
+  mkdir -p "$out"
+  for a in 1 2 3 4 5; do
+    echo "== recovery download attempt $a =="
+    python3 - "$MR" "$board" "$out" <<'PY' && break
 import os, sys, runpy, socket
 mr, board, out = sys.argv[1:4]
 socket.setdefaulttimeout(90)
 os.get_terminal_size = lambda *a, **k: os.terminal_size((100, 24))
-sys.argv = ["macrecovery.py", "-b", board, "-m", "00000000000000000",
-            "-os", "default", "-o", out, "download"]
+sys.argv = ["macrecovery.py","-b",board,"-m","00000000000000000","-os","default","-o",out,"download"]
 runpy.run_path(mr, run_name="__main__")
 PY
-  then
-    break
-  fi
-  echo "  failed/stalled, retrying in 10s..."
-  sleep 10
-done
+    echo "  stalled, retrying in 10s"; sleep 10
+  done
+  test -s "$out/BaseSystem.dmg"
+}
 
-test -s "$OUT/BaseSystem.dmg" || { echo "download did not complete"; exit 1; }
+if [ "${1:-}" != "--full" ]; then
+  get_recovery "${1:-}"
+  echo
+  ls -lh "$REPO/build/recovery/com.apple.recovery.boot"
+  echo "ONLINE installer ready. Next: sudo bash scripts/make-usb.sh /dev/sdX"
+  exit 0
+fi
+
+# ---------- --full : also grab InstallAssistant.pkg ----------
+get_recovery
+[ -f "$GIB" ] || { echo "missing gibMacOS - run scripts/fetch-components.sh"; exit 1; }
+
+echo "== resolving latest Sequoia InstallAssistant.pkg URL =="
+URL=$(python3 "$GIB" -c publicrelease -v 15 -i --no-interactive 2>/dev/null \
+      | grep -Eo 'https://[^ ]*InstallAssistant\.pkg' | tail -1)
+[ -n "$URL" ] || { echo "could not resolve InstallAssistant URL"; exit 1; }
+echo "  $URL"
+
+DST="$REPO/build/fullinstaller"
+mkdir -p "$DST"
+echo "== downloading InstallAssistant.pkg (~15 GB, resumable) =="
+curl -L -C - --retry 999 --retry-delay 5 --retry-all-errors -o "$DST/InstallAssistant.pkg" "$URL"
+
+sz=$(stat -c%s "$DST/InstallAssistant.pkg")
+echo "  got $((sz/1024/1024)) MB"
+[ "$sz" -gt 10000000000 ] || { echo "file looks too small - incomplete?"; exit 1; }
 echo
-ls -lh "$OUT"
-echo "Recovery ready. Next: sudo bash scripts/make-usb.sh /dev/sdX"
+echo "OFFLINE installer ready. Next: sudo bash scripts/make-usb.sh /dev/sdX"
+echo "(make-usb.sh auto-detects the .pkg and adds a second exFAT partition for it)"

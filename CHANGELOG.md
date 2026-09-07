@@ -24,6 +24,17 @@ with `StartImage - Already started`, **`install (dmg)` works** (OpenCore booting
 `BaseSystem.dmg` directly). Bring-up picker settings for now: `Timeout=0`,
 `HideAuxiliary=false`.
 
+### Offline installer (flaky Ethernet)
+
+- `scripts/download-macos.sh --full` — resolves + downloads the full Sequoia
+  `InstallAssistant.pkg` (~15 GB, resumable) via `gibMacOS`, alongside the BaseSystem.
+- `scripts/make-usb.sh` — auto-detects the `.pkg` and builds a **two-partition** USB:
+  FAT32 `INSTALL` (EFI + BaseSystem, boots) + exFAT `MACOS` (`InstallAssistant.pkg`).
+- `docs/RUNBOOK.md` → **Step 3-OFFLINE**: boot `install (dmg)`, erase the SSD, then in
+  Terminal `installer -pkg /Volumes/MACOS/InstallAssistant.pkg -target "/Volumes/Macintosh HD"`
+  followed by `startosinstall --volume …` — no network used.
+- `fetch-components.sh` now also clones `gibMacOS`.
+
 ## 2026-09-07 — initial release
 
 - OpenCore **1.0.7**, `ocvalidate` clean.

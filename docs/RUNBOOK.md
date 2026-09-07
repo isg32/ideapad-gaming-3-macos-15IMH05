@@ -89,8 +89,13 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
 
 ## Step 3 — Install macOS
 
-1. **Plug an Ethernet cable in** (the network installer downloads ~15 GB during install;
-   Wi-Fi is not available in the installer). USB tethering from a phone also works.
+> Two ways in. **Online** (default `download-macos.sh`): needs wired internet during the
+> install (~15 GB, no Wi-Fi in the installer). **Offline** (`download-macos.sh --full` +
+> the exFAT `MACOS` partition): no network at all — use this if your Ethernet is flaky.
+> Both boot the same way; only steps 4–6 differ. The offline path is **Step 3-OFFLINE**.
+
+1. **Online only:** plug in Ethernet (or iPhone USB — Android USB tethering won't work
+   on macOS).
 2. Plug the USB into a **left-side USB-A port**. Power on, tap **F12** → pick the
    **UEFI USB** entry (not the plain one).
 3. OpenCore picker appears with ~4 entries: **`No name`** (the USB's own EFI — ignore),
@@ -110,11 +115,34 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
    - first **`macOS Installer`** (a few times, ~20–40 min while it installs),
    - then finally **`Macintosh HD`**.
 
-> **Network during install:** the `macrecovery` image is an *online* installer — it
-> downloads ~15 GB during step 5, and this laptop has no Wi-Fi in the installer. If your
-> Ethernet is flaky, build an **offline** USB instead: `scripts/download-macos.sh
-> --full` fetches the complete `InstallAssistant` so the install needs no network.
-7. At the Setup Assistant, skip Wi-Fi (use the Ethernet cable), create your account.
+7. At the Setup Assistant, skip Wi-Fi, create your account.
+
+---
+
+## Step 3-OFFLINE — Install macOS with no network
+
+USB built with `download-macos.sh --full` + `make-usb.sh` (adds an exFAT `MACOS`
+partition holding `InstallAssistant.pkg`).
+
+1. Boot: **F12 → UEFI USB → OpenCore picker → `install (dmg)`**.
+2. **Disk Utility** → View ▸ Show All Devices → erase the whole ~477 GB SATA SSD →
+   **APFS**, **GUID Partition Map**, name `Macintosh HD` → quit.
+3. **Utilities ▸ Terminal** and run:
+   ```
+   installer -pkg "/Volumes/MACOS/InstallAssistant.pkg" -target "/Volumes/Macintosh HD"
+   "/Volumes/Macintosh HD/Applications/Install macOS Sequoia.app/Contents/Resources/startosinstall" \
+       --volume "/Volumes/Macintosh HD" --agreetolicense --nointeraction
+   ```
+   The first line copies the full installer app onto the SSD (~5 min, no network).
+   `startosinstall` then lays down macOS from the app's bundled `SharedSupport.dmg`.
+   The machine reboots itself when it's done with the prep phase.
+4. From here it's the same as the online path: **each reboot F12 → UEFI USB →
+   `macOS Installer`**, a few times (~20–40 min), then finally **`Macintosh HD`**.
+5. Setup Assistant → skip Wi-Fi → create your account.
+
+> If `/Volumes/MACOS` isn't there in Terminal, run `diskutil list` to find the exFAT
+> partition and `diskutil mount <id>`. If `startosinstall` says the app is missing, the
+> `installer -pkg` line failed — check its output for a space/permissions error.
 
 ---
 

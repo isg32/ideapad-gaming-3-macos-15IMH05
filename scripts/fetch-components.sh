@@ -59,10 +59,11 @@ for z in kexts/*.zip; do d="extract/$(basename "$z" .zip)"; mkdir -p "$d"; (cd "
 mkdir -p oc-rel && (cd oc-rel && unzip -oq "$DL/oc/OpenCore-RELEASE.zip")
 chmod +x oc-rel/Utilities/ocvalidate/ocvalidate.linux oc-rel/Utilities/macserial/macserial.linux 2>/dev/null || true
 
-echo "== git sources (reference EFI + OcBinaryData) =="
+echo "== git sources (reference EFI + OcBinaryData + gibMacOS) =="
 [ -d refEFI-luchina/.git ] || git clone --depth 1 \
   https://github.com/luchina-gabriel/EFI-NOTEBOOK-LENOVO-IDEAPAD-GAMING-3i-10300H-10750H-i5-i7-iGPU.git refEFI-luchina
 [ -d OcBinaryData/.git ] || git clone --depth 1 https://github.com/acidanthera/OcBinaryData.git OcBinaryData
+[ -d gibMacOS/.git ]     || git clone --depth 1 https://github.com/corpnewt/gibMacOS.git gibMacOS  # for download-macos.sh --full
 
 echo
 echo "OK. Next: python3 scripts/build-efi.py   (then scripts/gen-smbios.sh for real serials)"
