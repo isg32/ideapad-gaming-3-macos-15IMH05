@@ -3,7 +3,7 @@
 # Output: build/recovery/com.apple.recovery.boot/   (copied onto the USB by make-usb.sh)
 #
 #   bash scripts/download-macos.sh            # Sequoia 15.7.4 (default board)
-#   bash scripts/download-macos.sh <board-id> # override, see build/downloads/oc-rel/Utilities/macrecovery/boards.json
+#   bash scripts/download-macos.sh <board-id> # override; see boards.json in macrecovery/
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,16 +14,29 @@ BOARD="${1:-Mac-7BA5B2D9E42DDD94}"      # MacBookPro15,1 -> recovery caps at mac
 [ -f "$MR" ] || { echo "run scripts/fetch-components.sh first"; exit 1; }
 mkdir -p "$OUT"
 
-# macrecovery.py calls os.get_terminal_size(), which throws when stdout is not a TTY.
-python3 - "$MR" "$BOARD" "$OUT" <<'PY'
-import os, sys, runpy
+# macrecovery.py has two problems in a headless/unstable-network setting:
+#  1) os.get_terminal_size() throws when stdout is not a TTY
+#  2) no socket timeout -> a stalled Apple CDN connection hangs forever
+# This wrapper fixes both and retries.
+for attempt in 1 2 3 4 5; do
+  echo "== attempt $attempt =="
+  if python3 - "$MR" "$BOARD" "$OUT" <<'PY'
+import os, sys, runpy, socket
 mr, board, out = sys.argv[1:4]
+socket.setdefaulttimeout(90)
 os.get_terminal_size = lambda *a, **k: os.terminal_size((100, 24))
 sys.argv = ["macrecovery.py", "-b", board, "-m", "00000000000000000",
             "-os", "default", "-o", out, "download"]
 runpy.run_path(mr, run_name="__main__")
 PY
+  then
+    break
+  fi
+  echo "  failed/stalled, retrying in 10s..."
+  sleep 10
+done
 
+test -s "$OUT/BaseSystem.dmg" || { echo "download did not complete"; exit 1; }
 echo
 ls -lh "$OUT"
 echo "Recovery ready. Next: sudo bash scripts/make-usb.sh /dev/sdX"
