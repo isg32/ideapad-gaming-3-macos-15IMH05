@@ -1,0 +1,16 @@
+# local build area: downloaded binaries, extracted kexts, recovery image, work dirs
+/build/
+
+# your personalised EFI (real SMBIOS serial) - never commit or share
+/EFI-local/
+
+# Apple recovery media / disk images - copyrighted, do not commit
+*.dmg
+*.chunklist
+com.apple.recovery.boot/
+
+# macOS / editor cruft
+.DS_Store
+._*
+*.swp
+Thumbs.db
