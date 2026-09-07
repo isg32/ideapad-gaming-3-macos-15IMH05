@@ -198,6 +198,17 @@ def build(out, smbios):
 
     plistlib.dump(cfg, open(f"{out}/OC/config.plist", "wb"), sort_keys=False)
 
+    # BIOS EGCN41WW runs \EFI\BOOT\BOOTx64.efi directly and the Bootstrap shim fails
+    # with EFI_ALREADY_STARTED. BOOTx64.efi is therefore the full OpenCore.efi (copied
+    # above) - which then looks for config.plist / ACPI / Kexts *next to itself*. So
+    # mirror the whole payload into BOOT/ as well. OC/ stays as the canonical copy
+    # (ocvalidate target, and used by firmware that does honour \EFI\OC\).
+    for sub in ("ACPI", "Drivers", "Kexts", "Resources", "Tools"):
+        dst = f"{out}/BOOT/{sub}"
+        rm(dst)
+        shutil.copytree(f"{out}/OC/{sub}", dst)
+    shutil.copy2(f"{out}/OC/config.plist", f"{out}/BOOT/config.plist")
+
     n = sum(len(f) for _, _, f in os.walk(out))
     print(f"built {out}  ({n} files)  SMBIOS serial={smbios['serial']}")
     ocv = f"{DL}/oc-rel/Utilities/ocvalidate/ocvalidate.linux"
