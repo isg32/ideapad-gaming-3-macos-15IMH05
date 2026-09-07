@@ -172,8 +172,13 @@ def build(out, smbios):
     cfg["Misc"]["Debug"]["Target"] = 67          # log to ESP file during bring-up
 
     cfg["Booter"]["Quirks"]["ClearTaskSwitchBit"] = False   # OC 1.0.7 schema
+    # Lenovo/Insyde firmware (BIOS EGCN41WW) rejects Apple's boot.efi with
+    # EFI_INVALID_PARAMETER from StartImage -> macOS 14+/Sequoia needs this.
+    cfg["Booter"]["Quirks"]["FixupAppleEfiImages"] = True
     cfg["Booter"]["Quirks"] = {k: cfg["Booter"]["Quirks"][k]
                                for k in sorted(cfg["Booter"]["Quirks"])}
+
+    cfg["Misc"]["Debug"]["ApplePanic"] = True     # write panic-*.txt to the ESP
 
     cfg["UEFI"]["Drivers"] = [{"Arguments": "", "Comment": x, "Enabled": True,
                                "LoadEarly": False, "Path": x} for x in DRIVERS]
