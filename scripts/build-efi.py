@@ -169,8 +169,9 @@ def build(out, smbios):
     sec["SecureBootModel"] = "Disabled"
     sec["ScanPolicy"] = 0
     sec["Vault"] = "Optional"
-    cfg["Misc"]["Boot"]["Timeout"] = 10
-    cfg["Misc"]["Boot"]["HideAuxiliary"] = True
+    cfg["Misc"]["Boot"]["Timeout"] = 0            # bring-up: no auto-boot, user picks
+    cfg["Misc"]["Boot"]["HideAuxiliary"] = False  # bring-up: show Reset NVRAM / all entries
+    cfg["Misc"]["Boot"]["PollAppleHotKeys"] = True
     cfg["Misc"]["Debug"]["Target"] = 67          # log to ESP file during bring-up
 
     cfg["Booter"]["Quirks"]["ClearTaskSwitchBit"] = False   # OC 1.0.7 schema
