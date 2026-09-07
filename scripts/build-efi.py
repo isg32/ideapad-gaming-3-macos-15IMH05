@@ -177,8 +177,15 @@ def build(out, smbios):
     # Lenovo/Insyde firmware (BIOS EGCN41WW) rejects Apple's boot.efi with
     # EFI_INVALID_PARAMETER from StartImage -> macOS 14+/Sequoia needs this.
     cfg["Booter"]["Quirks"]["FixupAppleEfiImages"] = True
+    # Insyde/Lenovo firmware generally needs a rebuilt memory map to boot macOS;
+    # confirmed by the working 15IML05 Sequoia EFI. Pairs with the modern combo
+    # EnableWriteUnprotector=False + SyncRuntimePermissions=True (already set).
+    cfg["Booter"]["Quirks"]["RebuildAppleMemoryMap"] = True
     cfg["Booter"]["Quirks"] = {k: cfg["Booter"]["Quirks"][k]
                                for k in sorted(cfg["Booter"]["Quirks"])}
+
+    # BIOS has no CFG-Lock unlock -> spoof BOTH power-management MSR locks
+    cfg["Kernel"]["Quirks"]["AppleCpuPmCfgLock"] = True
 
     cfg["Misc"]["Debug"]["ApplePanic"] = True     # write panic-*.txt to the ESP
 
