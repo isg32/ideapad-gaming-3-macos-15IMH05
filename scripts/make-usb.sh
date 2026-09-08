@@ -40,7 +40,7 @@ done < <(lsblk -nr -o PATH,MOUNTPOINT "$DEV" | awk '$2!=""')
 TRAN=$(lsblk -ndo TRAN "$DEV" || true)
 echo "============================================================"
 echo " EFI source : $EFI_SRC"
-echo " Mode       : $([ $OFFLINE = 1 ] && echo 'OFFLINE (FAT32 + exFAT, full InstallAssistant.pkg)' || echo 'ONLINE (FAT32 only, ~15 GB downloaded during install)')"
+echo " Mode       : $([ $OFFLINE = 1 ] && echo 'OFFLINE (FAT32 + HFS+, local InstallAssistant.pkg; Ethernet still needed for the personalize phase)' || echo 'ONLINE (FAT32 only, ~15 GB downloaded during install)')"
 echo " TARGET     : $DEV   ($(lsblk -ndo MODEL "$DEV" || true), $(lsblk -ndo SIZE "$DEV"), bus=${TRAN:-?})"
 lsblk "$DEV"
 echo "============================================================"

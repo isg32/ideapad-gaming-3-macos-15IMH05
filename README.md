@@ -6,12 +6,17 @@ Sequoia 15**.
 
 Built and installed **entirely from Linux** — no existing Mac needed.
 
-> **Status: bring-up.** The macOS installer now **boots** on real hardware (BIOS
-> `EGCN41WW`, Insyde) after several firmware quirks — pick the **`install (dmg)`** entry
-> in the OpenCore picker. Full install + first boot of the installed system still being
-> validated. Boot fixes landed after `v1.0.0` — **use `EFI/` from `main`, not the
-> v1.0.0 asset.** See [`CHANGELOG.md`](CHANGELOG.md) and the "Firmware quirks" section
-> in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+> **Status: working.** A full **offline** install completed on real hardware (BIOS
+> `EGCN41WW`, Insyde) and macOS Sequoia now boots **from the internal SATA SSD** with no
+> USB attached. iGPU acceleration and audio work out of the box; Wi-Fi runs via
+> `itlwm` + HeliPort; Bluetooth is not yet tested. Boot fixes landed after `v1.0.0` —
+> **use `EFI/` from `main`, not the v1.0.0 asset.** In the OpenCore picker, boot the
+> **`install (dmg)`** entry. See [`CHANGELOG.md`](CHANGELOG.md) and the "Firmware quirks"
+> section in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+>
+> **First boot from the SSD-migrated EFI can black-screen for 5–6 minutes** before the
+> Apple logo appears (first-boot kext/prelinkedkernel cache rebuild). Wait it out — it
+> only happens once.
 
 | | |
 |---|---|
@@ -52,9 +57,9 @@ Wi‑Fi/Bluetooth won't work as‑is — swap the M.2 card or adapt the kexts.
 
 | ✅ Working | ⚠️ Partial | ❌ Not working |
 |---|---|---|
-| iGPU acceleration (QE/CI), brightness | **Wi‑Fi** — via `itlwm` + HeliPort app; no native menu, no AirDrop/Handoff | **HDMI out** — port is wired to the NVIDIA dGPU |
-| Internal display, backlight, Fn brightness | **Bluetooth** — works, occasionally needs a re‑pair after cold boot | **NVIDIA GPU** — no macOS driver, permanently off |
-| Audio: speakers, headphone jack, internal mic | **Sleep/wake** — unreliable on this chassis (as on the reference EFI) | External display over USB‑C — this model has **no** DP‑Alt (DisplayLink adapter only) |
+| iGPU acceleration (QE/CI), brightness — *worked out of the box* | **Wi‑Fi** — via `itlwm` + HeliPort app (confirmed working); no native menu, no AirDrop/Handoff | **HDMI out** — port is wired to the NVIDIA dGPU |
+| Internal display, backlight, Fn brightness | **Bluetooth** — kexts present, **not yet tested** on this unit | **NVIDIA GPU** — no macOS driver, permanently off |
+| Audio: speakers, headphone jack, internal mic — *worked out of the box* | **Sleep/wake** — unreliable on this chassis (as on the reference EFI) | External display over USB‑C — this model has **no** DP‑Alt (DisplayLink adapter only) |
 | Keyboard + all Fn keys | USB‑C — data only | |
 | Trackpad (gestures, tap, two‑finger) | | |
 | Ethernet (RTL8111) | | |

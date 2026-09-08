@@ -1,6 +1,38 @@
 # Changelog
 
-## Unreleased — boot fixes for BIOS EGCN41WW (Insyde/Lenovo)
+## 2026-09-08 — full offline install verified on real hardware
+
+macOS Sequoia 15 installed end-to-end **from Fedora** and now boots **from the internal
+SATA SSD** on a real 15IMH05 (BIOS `EGCN41WW`).
+
+- **A wired Ethernet connection was still required during the install** even on the
+  "offline" path — the installer's prepare/personalize phase reaches Apple. What the
+  offline USB removes is the **~15 GB OS payload download** (served from the local
+  `InstallAssistant.pkg` instead), which is the part that made the flaky Wi-Fi/tether
+  route fail. Plug in the RJ45 cable; `RealtekRTL8111` works in the installer.
+
+- **iGPU acceleration and audio worked on the first boot** — no `alcid=` sweep, no
+  framebuffer retuning needed. The ported `MacBookPro16,1` DeviceProperties are correct
+  for this laptop as-is.
+- **Wi-Fi**: `itlwm` + **HeliPort** — connects and stays connected. (No native menu /
+  AirDrop, as expected for `itlwm`.)
+- **Bluetooth**: kexts shipped but **not yet tested** on this unit.
+- **EFI migrated to the internal SSD's ESP** (copy `EFI/` from the USB ESP → `disk0s1`)
+  boots standalone with the USB removed. **Heads-up: the first boot from the migrated
+  EFI can sit on a black screen for 5–6 minutes** (first-boot kext cache /
+  prelinkedkernel rebuild) before the Apple logo. One-time only.
+- Offline install method that actually worked: `pkgutil --expand-full` the
+  `InstallAssistant.pkg` onto the target, then run `startosinstall` from the extracted
+  app. `installer -pkg … -target` does **not** work against a non-`/` target for this
+  package. RUNBOOK Step 3-OFFLINE updated to match.
+- The offline USB's second partition is **HFS+** (`MACOS`), not exFAT — the Sequoia
+  recovery has no exFAT mount support. `scripts/fix-usb-hfsplus.sh` reformats an
+  already-built USB's second partition in place.
+
+Still open: USBToolBox port map, sleep/wake, Bluetooth test, trimming the bring-up
+`boot-args` / picker timeout.
+
+## v1.0.0 follow-up — boot fixes for BIOS EGCN41WW (Insyde/Lenovo)
 
 First install attempts on a real 15IMH05 (BIOS `EGCN41WW`, 2023-06-09) black-screened.
 OpenCore's own log pinned each cause; all three fixes are now in `EFI/`:

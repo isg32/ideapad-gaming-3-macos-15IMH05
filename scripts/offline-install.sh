@@ -5,8 +5,10 @@
 #   bash "/Volumes/INSTALL/offline-install.sh"      # if the FAT partition is mounted
 #   bash /tmp/oi.sh                                 # if you pasted it to /tmp
 #
-# It mounts the USB's exFAT MACOS partition, finds InstallAssistant.pkg, lays the
-# installer app onto Macintosh HD, and starts an OFFLINE install (no network).
+# It mounts the USB's HFS+ MACOS partition, finds InstallAssistant.pkg, extracts the
+# installer app onto Macintosh HD, and runs startosinstall from it - so the ~15 GB OS
+# payload never downloads. A wired Ethernet cable is STILL needed: the installer's
+# prepare/personalize phase contacts Apple.
 set -u
 
 TARGET="/Volumes/Macintosh HD"
@@ -25,11 +27,10 @@ for v in /Volumes/*; do
 done
 
 if [ -z "$PKG" ]; then
-  say "not mounted yet - trying exFAT directly"
-  for d in $(diskutil list 2>/dev/null | grep -iE 'Microsoft Basic Data|Windows_NTFS|exfat' | grep -oE 'disk[0-9]+s[0-9]+'); do
-    mkdir -p /Volumes/MACOS
-    if mount_exfat "/dev/$d" /Volumes/MACOS 2>/dev/null; then echo "    mount_exfat /dev/$d ok"; fi
-    if [ -f /Volumes/MACOS/InstallAssistant.pkg ]; then PKG=/Volumes/MACOS/InstallAssistant.pkg; break; fi
+  say "not auto-mounted - forcing the HFS+ MACOS partition"
+  for d in $(diskutil list 2>/dev/null | grep -iE 'Apple_HFS|MACOS' | grep -oE 'disk[0-9]+s[0-9]+'); do
+    diskutil mount "$d" >/dev/null 2>&1
+    if [ -f "/Volumes/MACOS/InstallAssistant.pkg" ]; then PKG=/Volumes/MACOS/InstallAssistant.pkg; break; fi
   done
 fi
 
@@ -37,8 +38,8 @@ if [ -z "$PKG" ]; then
   say "InstallAssistant.pkg NOT found. Full disk layout:"
   diskutil list
   echo
-  echo "If the ~55 GB partition shows but won't mount, this recovery lacks exFAT"
-  echo "support - reformat that partition as HFS+ from Fedora and copy the pkg again."
+  echo "The MACOS partition must be HFS+ (not exFAT - this recovery can't mount exFAT)."
+  echo "From Fedora: sudo bash scripts/fix-usb-hfsplus.sh /dev/sdX"
   exit 1
 fi
 echo "    found: $PKG"
@@ -55,16 +56,16 @@ echo "    free on Macintosh HD: ${FREE} GB"
 [ "${FREE:-0}" -lt 25 ] && { say "not enough free space on $TARGET (need ~25+ GB)"; exit 1; }
 
 say "clearing any half-finished install data on the target"
-rm -rf "$TARGET/macOS InstallData" 2>/dev/null
+rm -rf "$TARGET/macOS InstallData" "$TARGET/IA" 2>/dev/null
 
-say "installing InstallAssistant.pkg onto Macintosh HD (~5 min, no progress bar)"
-installer -verbose -pkg "$PKG" -target "$TARGET" || { say "installer failed - see output above"; exit 1; }
+# NOTE: `installer -pkg InstallAssistant.pkg -target <non-/>` does NOT work - it fails
+# with "the installer encountered an error". Extract the payload directly instead.
+say "extracting InstallAssistant.pkg onto Macintosh HD (~15 GB, several minutes, no progress bar)"
+mkdir -p "$TARGET/IA"
+pkgutil --expand-full "$PKG" "$TARGET/IA" || { say "pkgutil --expand-full failed - see output above"; exit 1; }
 
-APP=""
-for cand in "$TARGET/Applications/"Install\ macOS*.app "/Applications/"Install\ macOS*.app; do
-  [ -d "$cand" ] && APP="$cand" && break
-done
-[ -n "$APP" ] || { say "Install macOS app not found after pkg install"; ls -la "$TARGET/Applications" 2>/dev/null; exit 1; }
+APP="$(find "$TARGET/IA" -maxdepth 6 -name 'Install macOS*.app' -print -quit 2>/dev/null)"
+[ -n "$APP" ] || { say "Install macOS app not found after extraction"; find "$TARGET/IA" -maxdepth 4 -name '*.app'; exit 1; }
 echo "    app: $APP"
 
 say "starting the offline install - the machine will reboot itself when prep is done"

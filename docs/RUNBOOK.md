@@ -89,13 +89,16 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
 
 ## Step 3 — Install macOS
 
-> Two ways in. **Online** (default `download-macos.sh`): needs wired internet during the
-> install (~15 GB, no Wi-Fi in the installer). **Offline** (`download-macos.sh --full` +
-> the exFAT `MACOS` partition): no network at all — use this if your Ethernet is flaky.
-> Both boot the same way; only steps 4–6 differ. The offline path is **Step 3-OFFLINE**.
+> Two ways in. **Online** (default `download-macos.sh`): downloads the full ~15 GB OS
+> over wired internet *during* the install. **Offline** (`download-macos.sh --full` + the
+> HFS+ `MACOS` partition): the ~15 GB payload comes from a local `InstallAssistant.pkg`
+> instead — use this if your connection is slow or flaky. **Either way a wired Ethernet
+> cable is still required** — even the offline installer contacts Apple during its
+> prepare/personalize phase; there is no Wi-Fi in the installer. Both boot the same way;
+> only steps 4–6 differ. The offline path is **Step 3-OFFLINE**.
 
-1. **Online only:** plug in Ethernet (or iPhone USB — Android USB tethering won't work
-   on macOS).
+1. Plug in **Ethernet** (or iPhone USB — Android USB tethering won't work on macOS).
+   Required for both paths.
 2. Plug the USB into a **left-side USB-A port**. Power on, tap **F12** → pick the
    **UEFI USB** entry (not the plain one).
 3. OpenCore picker appears with ~4 entries: **`No name`** (the USB's own EFI — ignore),
@@ -119,30 +122,38 @@ you'll have one FAT32 partition `INSTALL` containing `/EFI` and `/com.apple.reco
 
 ---
 
-## Step 3-OFFLINE — Install macOS with no network
+## Step 3-OFFLINE — Install macOS without the ~15 GB download
 
-USB built with `download-macos.sh --full` + `make-usb.sh` (adds an exFAT `MACOS`
-partition holding `InstallAssistant.pkg`).
+USB built with `download-macos.sh --full` + `make-usb.sh` (adds an **HFS+** `MACOS`
+partition holding `InstallAssistant.pkg` — HFS+, *not* exFAT: the Sequoia recovery can't
+mount exFAT). **Ethernet still needs to be plugged in** — the installer's prepare phase
+talks to Apple; the USB only removes the giant OS-payload download.
 
 1. Boot: **F12 → UEFI USB → OpenCore picker → `install (dmg)`**.
 2. **Disk Utility** → View ▸ Show All Devices → erase the whole ~477 GB SATA SSD →
-   **APFS**, **GUID Partition Map**, name `Macintosh HD` → quit.
-3. **Utilities ▸ Terminal** and run:
+   **APFS**, **GUID Partition Map**, name `Macintosh HD` → quit. The HFS+ `MACOS`
+   volume auto-mounts at `/Volumes/MACOS`.
+3. **Utilities ▸ Terminal**. Do **not** use `installer -pkg` — `InstallAssistant.pkg`
+   will not install to a non-`/` target and fails with "the installer encountered an
+   error". Extract it directly instead:
    ```
-   installer -pkg "/Volumes/MACOS/InstallAssistant.pkg" -target "/Volumes/Macintosh HD"
-   "/Volumes/Macintosh HD/Applications/Install macOS Sequoia.app/Contents/Resources/startosinstall" \
-       --volume "/Volumes/Macintosh HD" --agreetolicense --nointeraction
+   rm -rf "/Volumes/Macintosh HD/macOS InstallData"          # clear any half-done attempt
+   mkdir -p "/Volumes/Macintosh HD/IA"
+   pkgutil --expand-full "/Volumes/MACOS/InstallAssistant.pkg" "/Volumes/Macintosh HD/IA"
+   APP=$(find "/Volumes/Macintosh HD/IA" -maxdepth 5 -name "Install macOS*.app" -print -quit)
+   "$APP/Contents/Resources/startosinstall" --volume "/Volumes/Macintosh HD" \
+       --agreetolicense --nointeraction
    ```
-   The first line copies the full installer app onto the SSD (~5 min, no network).
+   `pkgutil --expand-full` unpacks the ~15 GB app onto the SSD (a few minutes).
    `startosinstall` then lays down macOS from the app's bundled `SharedSupport.dmg`.
-   The machine reboots itself when it's done with the prep phase.
+   The machine reboots itself when the prep phase finishes.
 4. From here it's the same as the online path: **each reboot F12 → UEFI USB →
    `macOS Installer`**, a few times (~20–40 min), then finally **`Macintosh HD`**.
 5. Setup Assistant → skip Wi-Fi → create your account.
 
-> If `/Volumes/MACOS` isn't there in Terminal, run `diskutil list` to find the exFAT
-> partition and `diskutil mount <id>`. If `startosinstall` says the app is missing, the
-> `installer -pkg` line failed — check its output for a space/permissions error.
+> If `/Volumes/MACOS` isn't there, run `diskutil list`, find the HFS+ partition and
+> `diskutil mount <id>`. If `pkgutil --expand-full` errors on space, the target SSD is
+> too small / not empty. `scripts/offline-install.sh` automates this whole step.
 
 ---
 
@@ -162,6 +173,14 @@ You're booting off the **USB's** OpenCore still. Make the internal SSD self-suff
 2. Reboot **without** pressing F12 — it should boot straight to Macintosh HD from the
    internal SSD. If the Lenovo firmware doesn't pick it up automatically, see
    Troubleshooting → "laptop won't boot without the USB".
+
+> **The very first boot from the migrated EFI can black-screen for 5–6 minutes** before
+> the Apple logo — macOS is rebuilding its kext / prelinkedkernel cache on the new ESP.
+> Don't power-cycle; wait it out. Subsequent boots are normal speed.
+>
+> The USB's FAT32 `INSTALL` partition will keep auto-mounting on the desktop whenever the
+> stick is plugged in — harmless; `diskutil eject` it, or just leave the USB out now that
+> the internal SSD boots on its own.
 
 ---
 
