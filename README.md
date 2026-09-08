@@ -9,10 +9,11 @@ Built and installed **entirely from Linux** — no existing Mac needed.
 > **Status: working.** A full **offline** install completed on real hardware (BIOS
 > `EGCN41WW`, Insyde) and macOS Sequoia now boots **from the internal SATA SSD** with no
 > USB attached. iGPU acceleration and audio work out of the box; Wi-Fi runs via
-> `itlwm` + HeliPort; Bluetooth is not yet tested. Boot fixes landed after `v1.0.0` —
-> **use `EFI/` from `main`, not the v1.0.0 asset.** In the OpenCore picker, boot the
-> **`install (dmg)`** entry. See [`CHANGELOG.md`](CHANGELOG.md) and the "Firmware quirks"
-> section in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+> `itlwm` + HeliPort; Bluetooth is not yet tested. **Use [`v1.0.1`](../../releases/latest)
+> or `EFI/` from `main`** — the `v1.0.0` asset predates the BIOS `EGCN41WW` boot fixes and
+> black-screens on that firmware. In the OpenCore picker, boot the **`install (dmg)`**
+> entry. See [`CHANGELOG.md`](CHANGELOG.md) and the "Firmware quirks" section in
+> [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 >
 > **First boot from the SSD-migrated EFI can black-screen for 5–6 minutes** before the
 > Apple logo appears (first-boot kext/prelinkedkernel cache rebuild). Wait it out — it
